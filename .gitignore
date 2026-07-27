@@ -574,3 +574,7 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/csharp,dotnetcore,images,video,windows,macos,linux,visualstudiocode
 
+### Project Assets (excepciones necesarias para PWA) ###
+# Los íconos PWA y favicon deben ser tracked a pesar de las reglas de Images
+!algoritmo-busqueda/public/*.png
+!algoritmo-busqueda/public/*.svg
