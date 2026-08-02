@@ -1,8 +1,8 @@
 // Estados posibles de un nodo durante la animacion
-export type NodeState = 'unvisited' | 'visiting' | 'visited' | 'path';
+export type NodeState = 'unvisited' | 'visiting' | 'visited' | 'path' | 'queued' | 'stacked';
 
 // Estados posibles de una arista durante la animacion
-export type EdgeState = 'idle' | 'active' | 'inPath' | 'rejected';
+export type EdgeState = 'idle' | 'active' | 'inPath' | 'rejected' | 'traversed';
 
 export interface NodeData {
   id: string;
@@ -10,6 +10,8 @@ export interface NodeData {
   value?: number;
   // Estado visual del nodo en la animacion actual
   state?: NodeState;
+  // Distancia acumulada (Dijkstra)
+  distance?: number;
 }
 
 export interface EdgeData {
@@ -26,6 +28,12 @@ export interface GraphStep {
   nodes: NodeData[];
   edges: EdgeData[];
   description: string;
+  // Nodo que se esta procesando en este paso
+  currentNodeId?: string;
+  // Contenido de la cola (BFS) o pila (DFS) en este paso
+  auxiliaryStructure?: string[];
+  // Tipo de recorrido para que la UI sepa que estructura mostrar
+  traversalType?: 'bfs' | 'dfs' | 'dijkstra' | 'kruskal';
 }
 
 // Grafo ponderado con listas de adyacencia
