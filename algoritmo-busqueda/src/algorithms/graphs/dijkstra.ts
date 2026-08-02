@@ -1,13 +1,13 @@
 import type { GraphStep, WeightedGraph, NodeState, EdgeState } from '../../types/graph';
 
-// Resultado completo del algoritmo de Dijkstra
+// Resultado completo 
 export interface DijkstraResult {
   steps: GraphStep[];
   // Tabla de distancias minimas desde el nodo origen
   distances: Record<string, number>;
-  // Nodo previo en el camino optimo para cada nodo
+  // Nodo previo 
   previous: Record<string, string | null>;
-  // Camino optimo reconstruido como lista de IDs
+  // Camino optimo 
   path: string[];
 }
 
@@ -142,7 +142,7 @@ export function dijkstra(
     while (current !== null) {
       path.unshift(current);
       pathNodes.add(current);
-      const prevNode = previous[current];
+      const prevNode: string | null = previous[current];
       if (prevNode) {
         pathEdges.add(`${prevNode}-${current}`);
       }
