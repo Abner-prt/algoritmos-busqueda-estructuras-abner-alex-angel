@@ -4,6 +4,7 @@ import { AppLayout } from './components/layout/AppLayout';
 import { PlaybackControls } from './components/controls/PlaybackControls';
 import { SearchPanel } from './components/ui/SearchPanel';
 import { GraphCanvas } from './components/visualizers/GraphCanvas';
+import { GraphControls } from './components/ui/GraphControls';
 import { usePlayback } from './hooks/usePlayback';
 import type { SearchConfig } from './types/search';
 import { useState } from 'react';
@@ -75,13 +76,22 @@ function SearchPage() {
 
 // Vista del modulo de grafos con el lienzo interactivo
 function GraphsPage() {
+  const [mode, setMode] = useState<'BFS' | 'DFS'>('BFS');
+
   // Hook de reproduccion para las animaciones del grafo
   const { state, play, pause, stepBack, stepForward, setSpeed, reset } = usePlayback(0);
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row gap-6 p-6 max-w-6xl mx-auto w-full">
       {/* Panel izquierdo de controles */}
-      <div className="w-full lg:w-72 flex-shrink-0">
+      <div className="w-full lg:w-72 flex-shrink-0 flex flex-col gap-4">
+        <GraphControls
+          mode={mode}
+          onModeChange={setMode}
+          onGenerateTree={() => console.log('Generar Árbol')}
+          onGenerateDense={() => console.log('Generar Denso')}
+          onGenerateLinked={() => console.log('Generar Enlazado')}
+        />
         <PlaybackControls
           state={state}
           onPlay={play}

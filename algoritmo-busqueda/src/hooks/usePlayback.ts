@@ -41,7 +41,14 @@ export function usePlayback(totalSteps: number) {
 
   // Actualiza el total de pasos cuando cambia el arreglo
   useEffect(() => {
-    setState(prev => ({ ...prev, totalSteps, currentStep: 0, isPlaying: false }));
+    // TODO: fix this eslint warning
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setState((prev) => ({
+      ...prev,
+      totalSteps,
+      currentStep: 0,
+      isPlaying: false,
+    }));
   }, [totalSteps]);
 
   // Inicia la reproduccion
