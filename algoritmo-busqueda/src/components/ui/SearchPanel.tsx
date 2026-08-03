@@ -9,8 +9,8 @@ interface SearchPanelProps {
 
 // Panel de entradas y configuracion para la busqueda
 export function SearchPanel({ onSearch, logs }: SearchPanelProps) {
-  const [arrayInput, setArrayInput] = useState('10, 25, 37, 42, 58, 64, 79, 83, 91');
-  const [target, setTarget] = useState('42');
+  const [arrayInput, setArrayInput] = useState('');
+  const [target, setTarget] = useState('');
   const [algorithm, setAlgorithm] = useState<'linear' | 'binary'>('linear');
   const [error, setError] = useState('');
 
@@ -37,13 +37,27 @@ export function SearchPanel({ onSearch, logs }: SearchPanelProps) {
     onSearch({ array: parsed, target: targetNum, algorithm });
   };
 
+  const handleAlgorithmChange = (newAlg: 'linear' | 'binary') => {
+    setAlgorithm(newAlg);
+    
+    // Auto-ejecutar búsqueda si hay datos válidos (evitar que cajas vacías se conviertan en 0)
+    if (arrayInput.trim() === '' || target.trim() === '') return;
+
+    const parsed = arrayInput.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n));
+    const targetNum = Number(target);
+    if (parsed.length > 0 && !isNaN(targetNum)) {
+      onSearch({ array: parsed, target: targetNum, algorithm: newAlg });
+      setError('');
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-lg border p-5 flex flex-col gap-5 w-full">
 
       {/* Selector de tipo de algoritmo */}
       <div className="flex gap-2">
         <button
-          onClick={() => setAlgorithm('linear')}
+          onClick={() => handleAlgorithmChange('linear')}
           className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
             algorithm === 'linear'
               ? 'bg-blue-500 text-white'
@@ -53,7 +67,7 @@ export function SearchPanel({ onSearch, logs }: SearchPanelProps) {
           Busqueda Lineal
         </button>
         <button
-          onClick={() => setAlgorithm('binary')}
+          onClick={() => handleAlgorithmChange('binary')}
           className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
             algorithm === 'binary'
               ? 'bg-indigo-500 text-white'
@@ -73,7 +87,13 @@ export function SearchPanel({ onSearch, logs }: SearchPanelProps) {
         <input
           type="text"
           value={arrayInput}
-          onChange={e => setArrayInput(e.target.value)}
+          onChange={e => {
+            const val = e.target.value;
+            // Solo permite números, comas, espacios y el signo menos
+            if (/^[0-9, \-]*$/.test(val)) {
+              setArrayInput(val);
+            }
+          }}
           placeholder="Ej: 10, 25, 37, 42, 58"
           className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
