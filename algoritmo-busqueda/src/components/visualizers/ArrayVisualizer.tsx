@@ -37,14 +37,14 @@ export default function ArrayVisualizer({ currentStep }: ArrayVisualizerProps) {
   const { array, pointers, description, found } = currentStep;
 
   return (
-    <div className="w-full flex flex-col items-center gap-6 p-4">
-      <div className="flex flex-wrap justify-center gap-3">
+    <div className="w-full flex flex-col items-center gap-4 sm:gap-6 p-2 sm:p-4">
+      <div className="flex flex-wrap justify-center gap-1.5 sm:gap-3">
         {array.map((element, index) => {
           const pointersHere = getPointersAtIndex(pointers, index);
 
           return (
             <div key={index} className="flex flex-col items-center gap-1">
-              <div className="flex gap-1 min-h-[24px] items-end">
+              <div className="flex gap-1 min-h-[20px] sm:min-h-[24px] items-end">
                 {pointersHere.map((label) => (
                   <span
                     key={label}
@@ -61,7 +61,7 @@ export default function ArrayVisualizer({ currentStep }: ArrayVisualizerProps) {
               <div
                 className={`
                   relative flex items-center justify-center
-                  w-14 h-14 rounded-xl border-2 font-bold text-lg
+                  w-10 h-10 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl border-2 font-bold text-sm sm:text-lg
                   transition-all duration-300 ease-in-out
                   ${stateStyles[element.state]}
                 `}
@@ -77,18 +77,18 @@ export default function ArrayVisualizer({ currentStep }: ArrayVisualizerProps) {
       </div>
       <div
         className={`
-          w-full max-w-2xl text-center text-sm px-4 py-2.5 rounded-lg border
+          w-full max-w-2xl text-center text-xs sm:text-sm px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg border
           ${found === true
-            ? 'bg-green-950/30 border-green-700 text-green-300'
+            ? 'bg-green-100 border-green-400 text-green-800'
             : found === false
-              ? 'bg-red-950/30 border-red-700 text-red-300'
-              : 'bg-gray-800/50 border-gray-700 text-gray-300'
+              ? 'bg-red-100 border-red-400 text-red-800'
+              : 'bg-gray-100 border-gray-300 text-gray-700'
           }
         `}
       >
         {description}
       </div>
-      <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-gray-400">
+      <div className="flex flex-wrap justify-center gap-x-3 sm:gap-x-5 gap-y-2 text-[10px] sm:text-xs text-gray-400">
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-sm bg-gray-200 border border-gray-300" />
           <span>Inactivo</span>

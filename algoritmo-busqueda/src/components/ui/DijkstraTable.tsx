@@ -48,9 +48,9 @@ export function DijkstraTable({ rows, startNode, endNode, isFinished, optimalCos
   const visitedCount = rows.filter(r => r.visited).length;
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border flex flex-col w-full h-[480px]">
+    <div className="bg-white rounded-xl shadow-lg border flex flex-col w-full h-auto max-h-[480px]">
 
-      <div className="p-4 border-b bg-gray-50 rounded-t-xl">
+      <div className="p-3 sm:p-4 border-b bg-gray-50 rounded-t-xl">
         <h3 className="font-bold text-gray-800 text-lg">Tabla de Distancias</h3>
         <p className="text-sm text-gray-500">
           Desde <span className="font-semibold text-blue-600">{startNode}</span>
