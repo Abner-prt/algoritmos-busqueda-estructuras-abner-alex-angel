@@ -1,17 +1,17 @@
 import type { GraphStep, WeightedGraph, NodeState, EdgeState } from '../../types/graph';
 
-// Resultado completo 
+// Resultado de Dijkstra
 export interface DijkstraResult {
   steps: GraphStep[];
-  // Tabla de distancias minimas desde el nodo origen
+  // Distancias calculadas
   distances: Record<string, number>;
-  // Nodo previo 
+  // Nodos previos
   previous: Record<string, string | null>;
-  // Camino optimo 
+  // Camino final
   path: string[];
 }
 
-// Generador de un snapshot visual de todos los nodos
+// Snapshot visual de nodos
 function createNodesSnapshot(
   graph: WeightedGraph,
   visited: Set<string>,
@@ -28,33 +28,43 @@ function createNodesSnapshot(
   });
 }
 
-// Generador de un snapshot visual de todas las aristas
+// Snapshot visual de aristas
 function createEdgesSnapshot(
   graph: WeightedGraph,
   activeEdgeId: string | null,
   pathEdges: Set<string>
 ) {
-  return Object.entries(graph.adjacency).flatMap(([src, neighbors]) =>
-    neighbors.map(n => {
-      const edgeId = `${src}-${n.target}`;
-      let state: EdgeState = 'idle';
-      if (pathEdges.has(edgeId) || pathEdges.has(`${n.target}-${src}`)) {
-        state = 'inPath';
-      } else if (edgeId === activeEdgeId) {
-        state = 'active';
+  const edgesMap = new Map<string, { source: string; target: string; weight: number; id: string }>();
+  
+  for (const [source, neighbors] of Object.entries(graph.adjacency)) {
+    for (const neighbor of neighbors) {
+      const [u, v] = [source, neighbor.target].sort();
+      const edgeId = `${u}-${v}`;
+      if (!edgesMap.has(edgeId)) {
+        edgesMap.set(edgeId, { source: u, target: v, weight: neighbor.weight, id: edgeId });
       }
-      return {
-        id: edgeId,
-        source: src,
-        target: n.target,
-        weight: n.weight,
-        state,
-      };
-    })
-  );
+    }
+  }
+
+  return Array.from(edgesMap.values()).map(e => {
+    let state: EdgeState = 'idle';
+    if (pathEdges.has(e.id)) {
+      state = 'inPath';
+    } else if (e.id === activeEdgeId) {
+      state = 'active';
+    }
+    
+    return {
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      weight: e.weight,
+      state,
+    };
+  });
 }
 
-// Genera los pasos de animacion del algoritmo de Dijkstra
+// Animacion del algoritmo
 export function dijkstra(
   graph: WeightedGraph,
   startId: string,
@@ -79,7 +89,7 @@ export function dijkstra(
   });
 
   while (unvisited.size > 0) {
-    // Buscar el nodo no visitado con la menor distancia
+    // Busca menor distancia
     let current = null;
     let minDistance = Infinity;
 
@@ -90,7 +100,7 @@ export function dijkstra(
       }
     }
 
-    // Si no hay nodos alcanzables o llegamos al destino
+    // Verifica destino
     if (current === null || (endId && current === endId)) {
       break;
     }
@@ -110,12 +120,24 @@ export function dijkstra(
     for (const neighbor of neighbors) {
       if (!unvisited.has(neighbor.target)) continue;
 
-      const edgeId = `${current}-${neighbor.target}`;
+      const [u, v] = [current, neighbor.target].sort();
+      const edgeId = `${u}-${v}`;
       const newDistance = distances[current] + neighbor.weight;
+
+      const getTreeEdges = () => {
+        const edges = new Set<string>();
+        for (const [node, prev] of Object.entries(previous)) {
+          if (prev) {
+            const [pu, pv] = [node, prev].sort();
+            edges.add(`${pu}-${pv}`);
+          }
+        }
+        return edges;
+      };
 
       steps.push({
         nodes: createNodesSnapshot(graph, visited, current, new Set()),
-        edges: createEdgesSnapshot(graph, edgeId, new Set()),
+        edges: createEdgesSnapshot(graph, edgeId, getTreeEdges()),
         description: `Evaluando camino a ${neighbor.target} a traves de ${current} con peso ${neighbor.weight}`,
       });
 
@@ -125,14 +147,14 @@ export function dijkstra(
         
         steps.push({
           nodes: createNodesSnapshot(graph, visited, current, new Set()),
-          edges: createEdgesSnapshot(graph, edgeId, new Set()),
+          edges: createEdgesSnapshot(graph, edgeId, getTreeEdges()),
           description: `Camino mas corto encontrado a ${neighbor.target}. Nueva distancia es ${newDistance}`,
         });
       }
     }
   }
 
-  // Reconstruccion del camino optimo
+  // Reconstruye camino
   const path: string[] = [];
   const pathEdges = new Set<string>();
   const pathNodes = new Set<string>();
@@ -144,7 +166,8 @@ export function dijkstra(
       pathNodes.add(current);
       const prevNode: string | null = previous[current];
       if (prevNode) {
-        pathEdges.add(`${prevNode}-${current}`);
+        const [u, v] = [prevNode, current].sort();
+        pathEdges.add(`${u}-${v}`);
       }
       current = prevNode;
     }

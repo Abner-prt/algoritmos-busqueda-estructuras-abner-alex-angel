@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useEffect } from "react";
 import {
   ReactFlow,
   Background,
@@ -10,11 +10,13 @@ import {
   type Node,
   type Edge,
   type OnConnect,
+  Handle,
+  Position,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { GraphStep, NodeState, EdgeState } from "../../types/graph";
 
-// Paleta de colores 
+// Paleta de colores
 const NODE_COLORS: Record<NodeState, React.CSSProperties> = {
   unvisited: {
     background: "rgba(255, 255, 255, 0.2)",
@@ -54,7 +56,7 @@ const NODE_COLORS: Record<NodeState, React.CSSProperties> = {
   },
 };
 
-// Colores de aristas segun su estado en la animacion
+// Colores de aristas
 const EDGE_COLORS: Record<EdgeState, string> = {
   idle: "#475569",
   active: "#fbbf24",
@@ -63,7 +65,7 @@ const EDGE_COLORS: Record<EdgeState, string> = {
   traversed: "#10b981",
 };
 
-// Datos base del nodo compartidos por el estilo glassmorphism
+// Estilo base de nodo
 const BASE_NODE_STYLE: React.CSSProperties = {
   backdropFilter: "blur(10px)",
   borderRadius: "50%",
@@ -77,36 +79,65 @@ const BASE_NODE_STYLE: React.CSSProperties = {
   transition: "all 0.35s ease",
 };
 
-// Nodos de muestra para demostrar los estados visuales
+
+const CustomGraphNode = ({ data, style }: any) => {
+  const handleStyle = { background: '#94a3b8', border: 'none' };
+  return (
+    <div style={style}>
+      {/* Top */}
+      <Handle type="target" position={Position.Top} id="top-tgt" style={handleStyle} />
+      <Handle type="source" position={Position.Top} id="top-src" style={{ ...handleStyle, opacity: 0 }} />
+      {/* Right */}
+      <Handle type="target" position={Position.Right} id="right-tgt" style={handleStyle} />
+      <Handle type="source" position={Position.Right} id="right-src" style={{ ...handleStyle, opacity: 0 }} />
+      {/* Bottom */}
+      <Handle type="target" position={Position.Bottom} id="bottom-tgt" style={handleStyle} />
+      <Handle type="source" position={Position.Bottom} id="bottom-src" style={{ ...handleStyle, opacity: 0 }} />
+      {/* Left */}
+      <Handle type="target" position={Position.Left} id="left-tgt" style={handleStyle} />
+      <Handle type="source" position={Position.Left} id="left-src" style={{ ...handleStyle, opacity: 0 }} />
+      {data.label}
+    </div>
+  );
+};
+
+const nodeTypes = { custom: CustomGraphNode };
+
+// Nodos de muestra
 const DEMO_NODES: Node[] = [
   {
     id: "1",
+    type: "custom",
     position: { x: 250, y: 50 },
-    data: { label: "A", nodeState: "visited" },
+    data: { label: "1", nodeState: "visited" },
   },
   {
     id: "2",
+    type: "custom",
     position: { x: 100, y: 180 },
-    data: { label: "B", nodeState: "visiting" },
+    data: { label: "2", nodeState: "visiting" },
   },
   {
     id: "3",
+    type: "custom",
     position: { x: 400, y: 180 },
-    data: { label: "C", nodeState: "unvisited" },
+    data: { label: "3", nodeState: "unvisited" },
   },
   {
     id: "4",
+    type: "custom",
     position: { x: 50, y: 320 },
-    data: { label: "D", nodeState: "unvisited" },
+    data: { label: "4", nodeState: "unvisited" },
   },
   {
     id: "5",
+    type: "custom",
     position: { x: 200, y: 320 },
-    data: { label: "E", nodeState: "path" },
+    data: { label: "5", nodeState: "path" },
   },
 ];
 
-// Aristas de muestra con distintos estados de animacion
+// Aristas de muestra
 const DEMO_EDGES: Edge[] = [
   { id: "e1-2", source: "1", target: "2", data: { edgeState: "active" } },
   { id: "e1-3", source: "1", target: "3", data: { edgeState: "idle" } },
@@ -114,41 +145,21 @@ const DEMO_EDGES: Edge[] = [
   { id: "e2-5", source: "2", target: "5", data: { edgeState: "inPath" } },
 ];
 
-// Convierte un paso del algoritmo en nodos y aristas con estilos aplicados
-function applyStepStyles(step: GraphStep): { nodes: Node[]; edges: Edge[] } {
-  const nodes = step.nodes.map((n) => ({
-    id: n.id,
-    position: { x: 0, y: 0 },
-    data: { label: n.label },
-    style: {
-      ...BASE_NODE_STYLE,
-      ...NODE_COLORS[n.state ?? "unvisited"],
-    },
-  }));
-
-  const edges = step.edges.map((e) => ({
-    id: e.id,
-    source: e.source,
-    target: e.target,
-    style: {
-      stroke: EDGE_COLORS[e.state ?? "idle"],
-      strokeWidth: e.state === "active" || e.state === "inPath" ? 3 : 1.5,
-      transition: "stroke 0.3s ease, stroke-width 0.3s ease",
-    },
-    label: e.weight !== undefined ? String(e.weight) : undefined,
-  }));
-
-  return { nodes, edges };
-}
-
 interface GraphCanvasProps {
-  // Paso actual del algoritmo a renderizar (opcional)
   currentStep?: GraphStep;
+  onAddEdge?: (source: string, target: string, weight?: number) => void;
+  onRemoveNode?: (nodeId: string) => void;
+  onRemoveEdge?: (source: string, target: string) => void;
+  onUpdateEdgeWeights?: (updates: { source: string, target: string, weight: number }[]) => void;
+  mode?: string;
 }
 
-// Lienzo interactivo de grafos con estados visuales animados
-export function GraphCanvas({ currentStep }: GraphCanvasProps) {
-  // Aplica estilos base a los nodos de muestra
+// Lienzo de grafos
+export function GraphCanvas({ currentStep, onAddEdge, onRemoveNode, onRemoveEdge,
+  onUpdateEdgeWeights,
+  mode,
+}: GraphCanvasProps) {
+  // Estilos a nodos muestra
   const styledDemoNodes = useMemo(
     () =>
       DEMO_NODES.map((n) => ({
@@ -161,7 +172,7 @@ export function GraphCanvas({ currentStep }: GraphCanvasProps) {
     [],
   );
 
-  // Aplica colores base a las aristas de muestra
+  // Estilos a aristas muestra
   const styledDemoEdges = useMemo(
     () =>
       DEMO_EDGES.map((e) => ({
@@ -178,21 +189,136 @@ export function GraphCanvas({ currentStep }: GraphCanvasProps) {
     [],
   );
 
-  // Usa los datos del paso actual si existen, si no usa los datos de muestra
-  const derivedStep = currentStep ? applyStepStyles(currentStep) : null;
+  const [nodes, setNodes, onNodesChange] = useNodesState(styledDemoNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(styledDemoEdges);
 
-  const [nodes, , onNodesChange] = useNodesState(
-    derivedStep?.nodes ?? styledDemoNodes,
-  );
-  const [edges, setEdges, onEdgesChange] = useEdgesState(
-    derivedStep?.edges ?? styledDemoEdges,
-  );
+  // Efecto para sincronizar los nodos y aristas con la animacion
 
-  // Conecta dos nodos cuando el usuario arrastra una arista entre ellos
+  useEffect(() => {
+    if (currentStep) {
+      setNodes((nds) =>
+        currentStep.nodes.map((n) => {
+          const existing = nds.find((en) => en.id === n.id);
+          const demoNode = DEMO_NODES.find((dn) => dn.id === n.id);
+          return {
+            id: n.id,
+            type: "custom",
+            position: existing?.position || demoNode?.position || { x: Math.random() * 300 + 100, y: Math.random() * 200 + 100 },
+            data: { label: n.label },
+            style: {
+              ...BASE_NODE_STYLE,
+              ...NODE_COLORS[n.state ?? "unvisited"],
+            },
+          };
+        }),
+      );
+
+      setEdges((eds) =>
+        currentStep.edges.map((e) => {
+          const existingEdge = eds.find(
+            (ee) =>
+              (ee.source === e.source && ee.target === e.target) ||
+              (ee.source === e.target && ee.target === e.source)
+          );
+
+          const newStyle = {
+            stroke: EDGE_COLORS[e.state ?? "idle"],
+            strokeWidth: e.state === "active" || e.state === "inPath" ? 3 : 1.5,
+            transition: "stroke 0.3s ease, stroke-width 0.3s ease",
+          };
+          const newLabel = e.weight !== undefined ? String(e.weight) : undefined;
+
+          if (existingEdge) {
+
+            return {
+              id: existingEdge.id,
+              source: existingEdge.source,
+              target: existingEdge.target,
+              sourceHandle: existingEdge.sourceHandle,
+              targetHandle: existingEdge.targetHandle,
+              type: existingEdge.type,
+              selected: existingEdge.selected,
+              style: newStyle,
+              label: newLabel,
+            };
+          }
+
+          return {
+            id: e.id,
+            source: e.source,
+            target: e.target,
+            style: newStyle,
+            label: newLabel,
+          };
+        }),
+      );
+    } else {
+      setNodes(styledDemoNodes);
+      setEdges(styledDemoEdges);
+    }
+  }, [currentStep, setNodes, setEdges, styledDemoNodes, styledDemoEdges]);
+
+  // Maneja conexion
   const onConnect: OnConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges],
+    (params) => {
+      setEdges((eds) => addEdge(params, eds));
+      if (onAddEdge && params.source && params.target) {
+        // Calcular distancia euclidiana para el peso
+        const sourceNode = nodes.find(n => n.id === params.source);
+        const targetNode = nodes.find(n => n.id === params.target);
+        let weight = 3;
+
+        if (sourceNode && targetNode) {
+          const dx = targetNode.position.x - sourceNode.position.x;
+          const dy = targetNode.position.y - sourceNode.position.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          weight = Math.max(1, Math.round(distance / 20)); // Escalar para tener numeros pequenos
+        }
+
+        onAddEdge(params.source, params.target, weight);
+      }
+    },
+    [setEdges, onAddEdge, nodes],
   );
+
+  // Maneja el fin del arrastre de nodos para recalcular distancias
+  const onNodeDragStop = useCallback((_event: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent, draggedNode: Node) => {
+    if (!onUpdateEdgeWeights) return;
+
+    // Buscar todas las aristas conectadas a este nodo
+    const connectedEdges = edges.filter(e => e.source === draggedNode.id || e.target === draggedNode.id);
+    if (connectedEdges.length === 0) return;
+
+    const updates: { source: string, target: string, weight: number }[] = [];
+
+    connectedEdges.forEach(edge => {
+      // Usamos el draggedNode que tiene la posicion 100% final, y buscamos el otro en el estado
+      const sourceNode = edge.source === draggedNode.id ? draggedNode : nodes.find(n => n.id === edge.source);
+      const targetNode = edge.target === draggedNode.id ? draggedNode : nodes.find(n => n.id === edge.target);
+
+      if (sourceNode && targetNode) {
+        const dx = targetNode.position.x - sourceNode.position.x;
+        const dy = targetNode.position.y - sourceNode.position.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const newWeight = Math.max(1, Math.round(distance / 20));
+
+        updates.push({ source: edge.source, target: edge.target, weight: newWeight });
+      }
+    });
+
+    if (updates.length > 0) {
+      onUpdateEdgeWeights(updates);
+    }
+  }, [edges, nodes, onUpdateEdgeWeights]);
+
+  // Maneja borrado
+  const onNodesDelete = useCallback((deleted: Node[]) => {
+    if (onRemoveNode) deleted.forEach(n => onRemoveNode(n.id));
+  }, [onRemoveNode]);
+
+  const onEdgesDelete = useCallback((deleted: Edge[]) => {
+    if (onRemoveEdge) deleted.forEach(e => onRemoveEdge(e.source, e.target));
+  }, [onRemoveEdge]);
 
   return (
     <div
@@ -206,38 +332,59 @@ export function GraphCanvas({ currentStep }: GraphCanvasProps) {
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodesDelete={onNodesDelete}
+        onEdgesDelete={onEdgesDelete}
         onConnect={onConnect}
+        onNodeDragStop={onNodeDragStop}
         fitView
         proOptions={{ hideAttribution: true }}
       >
-        {/* Fondo con patron de puntos */}
+        {/* Fondo con puntos */}
         <Background color="#334155" gap={20} size={1} />
 
-        {/* Controles de zoom y encuadre */}
+        {/* Controles de zoom */}
         <Controls className="bg-white/10 backdrop-blur-sm border-white/20 rounded-lg" />
 
-        {/* Leyenda de estados de los nodos */}
+        {/* Leyenda de estados */}
         <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 bg-black/40 backdrop-blur-sm rounded-lg p-3 text-xs">
-          {(["unvisited", "visiting", "visited", "path"] as NodeState[]).map(
-            (s) => (
-              <div key={s} className="flex items-center gap-2">
+          {(() => {
+            const items = [{ id: "unvisited", label: "No visitado", color: "rgba(255, 255, 255, 0.4)" }];
+            const m = mode?.toLowerCase();
+
+            if (m === 'bfs') {
+              items.push({ id: "visiting", label: "Visitando", color: "rgba(251, 191, 36, 0.9)" });
+              items.push({ id: "visited", label: "Visitado", color: "rgba(34, 197, 94, 0.8)" });
+              items.push({ id: "queued", label: "En Cola", color: "rgba(168, 85, 247, 0.8)" });
+            } else if (m === 'dfs') {
+              items.push({ id: "visiting", label: "Visitando", color: "rgba(251, 191, 36, 0.9)" });
+              items.push({ id: "visited", label: "Visitado", color: "rgba(34, 197, 94, 0.8)" });
+              items.push({ id: "stacked", label: "En Pila", color: "rgba(236, 72, 153, 0.8)" });
+            } else if (m === 'kruskal') {
+              items.push({ id: "visited", label: "Conectado (Nodo)", color: "rgba(34, 197, 94, 0.8)" });
+              items.push({ id: "evaluating", label: "Evaluando (Arista)", color: "#fbbf24" }); // Yellow
+              items.push({ id: "in-tree", label: "En Árbol (Arista)", color: "#3b82f6" }); // Blue
+              items.push({ id: "rejected", label: "Descartada (Arista)", color: "#ef4444" }); // Red
+            } else {
+              items.push({ id: "visiting", label: "Visitando", color: "rgba(251, 191, 36, 0.9)" });
+              items.push({ id: "visited", label: "Visitado", color: "rgba(34, 197, 94, 0.8)" });
+              items.push({ id: "path", label: "Ruta Óptima", color: "rgba(59, 130, 246, 1)" });
+            }
+            return items.map((s) => (
+              <div key={s.id} className="flex items-center gap-2">
                 <div
                   className="w-3 h-3 rounded-full flex-shrink-0"
-                  style={{
-                    background: NODE_COLORS[s].border
-                      ?.toString()
-                      .replace("2px solid ", ""),
-                  }}
+                  style={{ background: s.color }}
                 />
-                <span className="text-slate-300 capitalize">{s}</span>
+                <span className="text-slate-300">{s.label}</span>
               </div>
-            ),
-          )}
+            ));
+          })()}
         </div>
 
-        {/* Mapa de miniatura del grafo */}
+        {/* Mini mapa */}
         <MiniMap
           style={{
             background: "rgba(15, 23, 42, 0.8)",

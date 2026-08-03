@@ -7,16 +7,25 @@ export interface KruskalResult {
   mstEdges: string[];
 }
 
-//  snapshot de nodos
-function createNodesSnapshot(graph: WeightedGraph): { id: string; label: string; state: NodeState }[] {
+// Snapshot visual de nodos
+function createNodesSnapshot(graph: WeightedGraph, mstEdges?: Set<string>): { id: string; label: string; state: NodeState }[] {
+  const connectedNodes = new Set<string>();
+  if (mstEdges) {
+    for (const edge of mstEdges) {
+      const [u, v] = edge.split('-');
+      connectedNodes.add(u);
+      connectedNodes.add(v);
+    }
+  }
+
   return graph.nodes.map(id => ({
     id,
     label: id,
-    state: 'unvisited' // En Kruskal todos los nodos empiezan igual y no se visitan en orden
+    state: connectedNodes.has(id) ? 'visited' : 'unvisited'
   }));
 }
 
-// snapshot de aristas
+// Snapshot visual de aristas
 function createEdgesSnapshot(
   allEdges: { source: string; target: string; weight: number; id: string }[],
   activeEdgeId: string | null,
@@ -43,16 +52,16 @@ function createEdgesSnapshot(
   });
 }
 
-// Genera los pasos de animación del algoritmo de Kruskal
+// Animacion del algoritmo
 export function kruskal(graph: WeightedGraph): KruskalResult {
   const steps: GraphStep[] = [];
-  
-  // Extrae todas las aristas sin duplicar (asumiendo grafo no dirigido)
+
+  // Extrae aristas sin duplicar
   const edgesMap = new Map<string, { source: string; target: string; weight: number; id: string }>();
-  
+
   for (const [source, neighbors] of Object.entries(graph.adjacency)) {
     for (const neighbor of neighbors) {
-      // id unico para no duplicar aristas
+      // Identificador unico de arista
       const [u, v] = [source, neighbor.target].sort();
       const edgeId = `${u}-${v}`;
       if (!edgesMap.has(edgeId)) {
@@ -63,7 +72,7 @@ export function kruskal(graph: WeightedGraph): KruskalResult {
 
   const allEdges = Array.from(edgesMap.values());
 
-  // ordenar aristas por peso de menor a mayor
+  // Ordena aristas por peso
   allEdges.sort((a, b) => a.weight - b.weight);
 
   const uf = new UnionFind(graph.nodes);
@@ -71,56 +80,52 @@ export function kruskal(graph: WeightedGraph): KruskalResult {
   const rejectedEdges = new Set<string>();
   let totalWeight = 0;
 
-  // paso inicial
+  // Paso inicial
   steps.push({
-    nodes: createNodesSnapshot(graph),
+    nodes: createNodesSnapshot(graph, mstEdges),
     edges: createEdgesSnapshot(allEdges, null, mstEdges, rejectedEdges),
     description: `Inicio del algoritmo de Kruskal. Las aristas han sido ordenadas de menor a mayor peso.`,
     traversalType: 'kruskal'
   });
 
-  // Iterar por cada arista
+  // Itera por aristas
   for (const edge of allEdges) {
-    // Paso: Evaluando la arista
+    // Evalua arista
     steps.push({
-      nodes: createNodesSnapshot(graph),
+      nodes: createNodesSnapshot(graph, mstEdges),
       edges: createEdgesSnapshot(allEdges, edge.id, mstEdges, rejectedEdges),
       description: `Evaluando arista ${edge.source}-${edge.target} con peso ${edge.weight}...`,
       traversalType: 'kruskal'
     });
 
-    // Si los nodos de la arista no están en el mismo conjunto, agregarla al MST
+    // Agrega arista a arbol
     if (uf.union(edge.source, edge.target)) {
       mstEdges.add(edge.id);
       totalWeight += edge.weight;
-      
+
       steps.push({
-        nodes: createNodesSnapshot(graph),
+        nodes: createNodesSnapshot(graph, mstEdges),
         edges: createEdgesSnapshot(allEdges, null, mstEdges, rejectedEdges),
         description: `Arista ${edge.source}-${edge.target} agregada al MST. Peso acumulado: ${totalWeight}`,
         traversalType: 'kruskal'
       });
     } else {
-      // forma un ciclo, se descarta
+      // Descarta ciclo
       rejectedEdges.add(edge.id);
-      
+
       steps.push({
-        nodes: createNodesSnapshot(graph),
+        nodes: createNodesSnapshot(graph, mstEdges),
         edges: createEdgesSnapshot(allEdges, null, mstEdges, rejectedEdges),
         description: `La arista ${edge.source}-${edge.target} formaría un ciclo. Se descarta.`,
         traversalType: 'kruskal'
       });
     }
-    
-    // Optimización: Si el MST ya tiene V-1 aristas, hemos terminado
-    if (mstEdges.size === graph.nodes.length - 1) {
-      break;
-    }
+
   }
 
-  // Paso final
+  // Finaliza algoritmo
   steps.push({
-    nodes: createNodesSnapshot(graph),
+    nodes: createNodesSnapshot(graph, mstEdges),
     edges: createEdgesSnapshot(allEdges, null, mstEdges, rejectedEdges),
     description: `Kruskal finalizado. Peso total del Árbol Abarcador Mínimo: ${totalWeight}`,
     traversalType: 'kruskal'

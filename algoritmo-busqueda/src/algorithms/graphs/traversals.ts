@@ -22,21 +22,42 @@ function createNodesSnapshot(
   });
 }
 
-// Genera el estado visual de cada arista
 function createEdgesSnapshot(
   graph: WeightedGraph,
   activeEdgeId: string | null,
   traversedEdges: Set<string>
 ) {
-  return Object.entries(graph.adjacency).flatMap(([src, neighbors]) =>
-    neighbors.map(n => {
-      const edgeId = `${src}-${n.target}`;
-      let state: EdgeState = 'idle';
-      if (edgeId === activeEdgeId) state = 'active';
-      else if (traversedEdges.has(edgeId) || traversedEdges.has(`${n.target}-${src}`)) state = 'traversed';
-      return { id: edgeId, source: src, target: n.target, weight: n.weight, state };
-    })
-  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const edgesMap = new Map<string, any>();
+
+  Object.entries(graph.adjacency).forEach(([src, neighbors]) => {
+    neighbors.forEach(n => {
+      const [u, v] = [src, n.target].sort();
+      const edgeId = `${u}-${v}`;
+
+      if (!edgesMap.has(edgeId)) {
+        let state: EdgeState = 'idle';
+        const dir1 = `${u}-${v}`;
+        const dir2 = `${v}-${u}`;
+
+        if (dir1 === activeEdgeId || dir2 === activeEdgeId) {
+          state = 'active';
+        } else if (traversedEdges.has(dir1) || traversedEdges.has(dir2)) {
+          state = 'traversed';
+        }
+
+        edgesMap.set(edgeId, {
+          id: edgeId,
+          source: u,
+          target: v,
+          weight: n.weight,
+          state
+        });
+      }
+    });
+  });
+
+  return Array.from(edgesMap.values());
 }
 
 // Recorrido en anchura
@@ -76,7 +97,7 @@ export function bfs(graph: WeightedGraph, startId: string): TraversalResult {
       traversalType: 'bfs',
     });
 
-    const neighbors = graph.adjacency[current] || [];
+    const neighbors = [...(graph.adjacency[current] || [])].sort((a, b) => a.weight - b.weight);
 
     for (const neighbor of neighbors) {
       if (visited.has(neighbor.target) || inQueue.has(neighbor.target)) continue;
@@ -148,9 +169,8 @@ export function dfs(graph: WeightedGraph, startId: string): TraversalResult {
       traversalType: 'dfs',
     });
 
-    const neighbors = graph.adjacency[current] || [];
+    const neighbors = [...(graph.adjacency[current] || [])].sort((a, b) => a.weight - b.weight);
 
-    // Recorrer vecinos en orden inverso
     for (let i = neighbors.length - 1; i >= 0; i--) {
       const neighbor = neighbors[i];
       if (visited.has(neighbor.target)) continue;
