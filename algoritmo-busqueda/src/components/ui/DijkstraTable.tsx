@@ -1,4 +1,5 @@
-import { MapPin, Navigation, Infinity as InfinityIcon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MapPin, Navigation, Infinity as InfinityIcon, TrendingDown, Trophy } from 'lucide-react';
 
 export interface DijkstraRow {
   nodeId: string;
@@ -12,9 +13,40 @@ interface DijkstraTableProps {
   rows: DijkstraRow[];
   startNode: string;
   endNode?: string;
+  isFinished?: boolean;
+  optimalCost?: number;
 }
 
-export function DijkstraTable({ rows, startNode, endNode }: DijkstraTableProps) {
+export function DijkstraTable({ rows, startNode, endNode, isFinished, optimalCost }: DijkstraTableProps) {
+  // Guardar distancias previas para detectar cambios
+  const [prevDistances, setPrevDistances] = useState<Record<string, number>>({});
+  const [changedNodes, setChangedNodes] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const newChanged = new Set<string>();
+    for (const row of rows) {
+      const prev = prevDistances[row.nodeId];
+      if (prev !== undefined && prev !== row.distance) {
+        newChanged.add(row.nodeId);
+      }
+    }
+    setChangedNodes(newChanged);
+
+    const updated: Record<string, number> = {};
+    for (const row of rows) {
+      updated[row.nodeId] = row.distance;
+    }
+    setPrevDistances(updated);
+
+    // Limpiar animacion despues de 600ms
+    if (newChanged.size > 0) {
+      const timer = setTimeout(() => setChangedNodes(new Set()), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [rows]);
+
+  const visitedCount = rows.filter(r => r.visited).length;
+
   return (
     <div className="bg-white rounded-xl shadow-lg border flex flex-col w-full h-[480px]">
 
@@ -40,12 +72,14 @@ export function DijkstraTable({ rows, startNode, endNode }: DijkstraTableProps) 
           </thead>
           <tbody>
             {rows.map(row => {
-              let rowClass = 'border-t border-gray-100';
-              if (row.isCurrent) rowClass += ' bg-yellow-50';
+              const justChanged = changedNodes.has(row.nodeId);
+              let rowClass = 'border-t border-gray-100 transition-all duration-300';
+              if (justChanged) rowClass += ' bg-amber-100';
+              else if (row.isCurrent) rowClass += ' bg-yellow-50';
               else if (row.visited) rowClass += ' bg-green-50/50';
 
               return (
-                <tr key={row.nodeId} className={`${rowClass} transition-colors`}>
+                <tr key={row.nodeId} className={rowClass}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       {row.nodeId === startNode ? (
@@ -60,15 +94,22 @@ export function DijkstraTable({ rows, startNode, endNode }: DijkstraTableProps) 
                   </td>
 
                   <td className="px-4 py-3 text-center">
-                    {row.distance === Infinity ? (
-                      <span className="flex items-center justify-center gap-1 text-gray-400">
-                        <InfinityIcon className="w-4 h-4" /> ∞
-                      </span>
-                    ) : (
-                      <span className="font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-md">
-                        {row.distance}
-                      </span>
-                    )}
+                    <div className="flex items-center justify-center gap-1">
+                      {justChanged && <TrendingDown className="w-3 h-3 text-amber-600 animate-bounce" />}
+                      {row.distance === Infinity ? (
+                        <span className="flex items-center gap-1 text-gray-400">
+                          <InfinityIcon className="w-4 h-4" /> ∞
+                        </span>
+                      ) : (
+                        <span className={`font-bold px-2 py-0.5 rounded-md transition-all duration-300 ${
+                          justChanged
+                            ? 'text-amber-800 bg-amber-200 scale-110'
+                            : 'text-blue-700 bg-blue-100'
+                        }`}>
+                          {row.distance}
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   <td className="px-4 py-3 text-center text-gray-600">
@@ -97,8 +138,17 @@ export function DijkstraTable({ rows, startNode, endNode }: DijkstraTableProps) 
         </table>
       </div>
 
-      <div className="p-3 border-t bg-gray-50 rounded-b-xl text-xs text-gray-500 text-center">
-        {rows.filter(r => r.visited).length} / {rows.length} nodos visitados
+      {/* Pie con progreso y costo final */}
+      <div className="p-3 border-t bg-gray-50 rounded-b-xl flex items-center justify-between">
+        <span className="text-xs text-gray-500">
+          {visitedCount} / {rows.length} nodos visitados
+        </span>
+        {isFinished && optimalCost !== undefined && (
+          <div className="flex items-center gap-1.5 text-sm font-bold text-green-700">
+            <Trophy className="w-4 h-4" />
+            Costo: {optimalCost}
+          </div>
+        )}
       </div>
     </div>
   );
