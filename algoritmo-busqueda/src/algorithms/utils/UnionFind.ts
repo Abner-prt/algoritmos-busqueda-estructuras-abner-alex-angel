@@ -11,7 +11,7 @@ export class UnionFind {
     }
   }
 
-  // Encuentra el origen del conjunto al que pertenece un nodo
+  // encuentra el origen del conjunto al que pertenece un nodo
   find(i: string): string {
     if (this.parent[i] !== i) {
       this.parent[i] = this.find(this.parent[i]);
@@ -19,13 +19,13 @@ export class UnionFind {
     return this.parent[i];
   }
 
-  // Une dos conjuntos por rango
+  // une dos conjuntos por rango
   union(i: string, j: string): boolean {
     const rootI = this.find(i);
     const rootJ = this.find(j);
 
     if (rootI === rootJ) {
-      return false; // si ya están en el mismo conjunto, formaría un ciclo
+      return false; // si ya estan en el mismo conjunto, forma un ciclo
     }
 
     if (this.rank[rootI] < this.rank[rootJ]) {
