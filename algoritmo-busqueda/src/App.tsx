@@ -100,7 +100,7 @@ function SearchPage() {
       <div className="flex-1 min-h-[400px]">
         {/* Visualizador de arreglo */}
         {currentStepData ? (
-          <ArrayVisualizer currentStep={currentStepData} />
+          <ArrayVisualizer currentStep={currentStepData} algorithm={searchConfig?.algorithm} />
         ) : (
           <div className="w-full h-full bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center">
             <p className="text-gray-400">Presiona Buscar para visualizar</p>
@@ -203,19 +203,22 @@ function GraphsPage() {
     let dijkstraData: DijkstraResult | null = null;
     let kruskalData: KruskalResult | null = null;
 
-    if (mode === 'BFS') {
-      calcSteps = bfs(graph, '1').steps;
-    } else if (mode === 'DFS') {
-      calcSteps = dfs(graph, '1').steps;
-    } else if (mode === 'Dijkstra') {
-      dijkstraData = dijkstra(graph, '1', '5');
+    const startNode = graph.nodes[0] || '';
+    const endNode = graph.nodes[graph.nodes.length - 1] || '';
+
+    if (mode === 'BFS' && startNode) {
+      calcSteps = bfs(graph, startNode).steps;
+    } else if (mode === 'DFS' && startNode) {
+      calcSteps = dfs(graph, startNode).steps;
+    } else if (mode === 'Dijkstra' && startNode && endNode) {
+      dijkstraData = dijkstra(graph, startNode, endNode);
       calcSteps = dijkstraData.steps;
     } else if (mode === 'Kruskal') {
       kruskalData = kruskal(graph);
       calcSteps = kruskalData.steps;
     }
 
-    return { steps: calcSteps, dijkstraData, kruskalData };
+    return { steps: calcSteps, dijkstraData, kruskalData, startNode, endNode };
   }, [mode, graph]);
 
   const { state, play, pause, stepBack, stepForward, setSpeed, reset } = usePlayback(computedData.steps.length);
@@ -244,7 +247,7 @@ function GraphsPage() {
   const dijkstraRowsForUI = useMemo(() => {
     if (mode !== 'Dijkstra' || !computedData.dijkstraData || !currentStepData) return [];
 
-    return demoGraph.nodes.map(nodeId => {
+    return graph.nodes.map(nodeId => {
       const nodeState = currentStepData.nodes.find(n => n.id === nodeId)?.state;
       return {
         nodeId,
@@ -254,7 +257,7 @@ function GraphsPage() {
         isCurrent: nodeState === 'visiting'
       };
     });
-  }, [mode, computedData.dijkstraData, currentStepData]);
+  }, [mode, computedData.dijkstraData, currentStepData, graph.nodes]);
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row gap-6 p-6 max-w-7xl mx-auto w-full">
@@ -297,8 +300,8 @@ function GraphsPage() {
         {mode === 'Dijkstra' && computedData.dijkstraData && (
           <DijkstraTable
             rows={dijkstraRowsForUI}
-            startNode="1"
-            endNode="5"
+            startNode={computedData.startNode}
+            endNode={computedData.endNode}
           />
         )}
 

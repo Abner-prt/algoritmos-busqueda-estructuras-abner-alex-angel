@@ -2,6 +2,7 @@ import type { SearchStep, ElementState } from '../../types/search';
 
 interface ArrayVisualizerProps {
   currentStep: SearchStep;
+  algorithm?: 'linear' | 'binary';
 }
 
 const stateStyles: Record<ElementState, string> = {
@@ -33,7 +34,7 @@ function getPointersAtIndex(
   return labels;
 }
 
-export default function ArrayVisualizer({ currentStep }: ArrayVisualizerProps) {
+export default function ArrayVisualizer({ currentStep, algorithm }: ArrayVisualizerProps) {
   const { array, pointers, description, found } = currentStep;
 
   return (
@@ -105,10 +106,12 @@ export default function ArrayVisualizer({ currentStep }: ArrayVisualizerProps) {
           <span className="w-3 h-3 rounded-sm bg-red-900/60 border border-red-800" />
           <span>Descartado</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-blue-200 border border-blue-400" />
-          <span>En rango</span>
-        </div>
+        {algorithm === 'binary' && (
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-sm bg-blue-200 border border-blue-400" />
+            <span>En rango</span>
+          </div>
+        )}
       </div>
     </div>
   );
